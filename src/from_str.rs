@@ -556,6 +556,8 @@ impl Display for ParseFixedError {
     }
 }
 
+impl std::error::Error for ParseFixedError {}
+
 // also trims zeros at start of int and at end of frac
 fn parse_bounds(bytes: &[u8], radix: u32) -> Result<Parse<'_>, ParseFixedError> {
     let mut sign: Option<bool> = None;
