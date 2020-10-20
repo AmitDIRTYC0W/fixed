@@ -209,12 +209,12 @@ There are three experimental feature:
     similar to how wrapping methods will wrap even when debug
     assertions are enabled. (The plan is to always enable this
     functionality but remove the experimental feature in version
-    1.4.0.)
+    1.5.0.)
  3. `serde-str`, disabled by default. Fixed-point numbers are
     serialized as strings showing the value when using human-readable
     formats. This feature requires the `serde` and the `std` optional
     features. (The plan is to upgrade this to an optional feature in
-    version 1.4.0.) **Warning:** numbers serialized when this feature
+    version 1.5.0.) **Warning:** numbers serialized when this feature
     is enabled cannot be deserialized when this feature is disabled.
 
 ## License

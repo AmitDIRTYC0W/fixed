@@ -5,6 +5,16 @@ modification, are permitted in any medium without royalty provided the
 copyright notice and this notice are preserved. This file is offered
 as-is, without any warranty. -->
 
+Version 1.4.0 (unreleased)
+==========================
+
+  * For the experimental feature [`serde-str`][feat-exp-1-4],
+    serialization in human-readable formats was made more convenient
+    to write manually. (This makes it incompatible with the version in
+    1.3.0.)
+
+[feat-exp-1-4]: https://tspiteri.gitlab.io/fixed/dev/fixed/#experimental-optional-features
+
 Version 1.3.0 (2020-10-15)
 ==========================
 

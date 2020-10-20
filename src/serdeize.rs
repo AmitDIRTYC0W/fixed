@@ -20,55 +20,40 @@ use crate::{
     FixedI128, FixedI16, FixedI32, FixedI64, FixedI8, FixedU128, FixedU16, FixedU32, FixedU64,
     FixedU8, Wrapping,
 };
-use core::{
-    fmt::{Error as FmtError, Formatter, Result as FmtResult, Write as FmtWrite},
-    marker::PhantomData,
-    str,
-};
 #[cfg(feature = "serde-str")]
-use serde::de::Unexpected;
+use core::str::FromStr;
 use serde::{
-    de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor},
-    ser::{Serialize, SerializeStruct, Serializer},
+    de::{Deserialize, Deserializer, Error as DeError},
+    ser::{Serialize, Serializer},
 };
-
-// 42 bytes should be approximately enough for FixedI128:
-//   * log_10(2^128) == 39
-//   * one each for: sign, period, zero in case of I0F128
-// To be safe and not care about corner cases, we just use 48 bytes.
-struct Buffer {
-    len: usize,
-    data: [u8; 48],
-}
-
-impl FmtWrite for Buffer {
-    fn write_str(&mut self, s: &str) -> Result<(), FmtError> {
-        let next_len = self.len + s.len();
-        self.data[self.len..next_len].copy_from_slice(s.as_bytes());
-        self.len = next_len;
-        Ok(())
-    }
-}
+#[cfg(not(feature = "serde-str"))]
+use {
+    core::fmt::{Formatter, Result as FmtResult},
+    serde::{
+        de::{MapAccess, SeqAccess, Visitor},
+        ser::SerializeStruct,
+    },
+};
 
 macro_rules! serde_fixed {
     ($Fixed:ident($LeEqU:ident) is $TBits:ident name $Name:expr) => {
         impl<Frac: $LeEqU> Serialize for $Fixed<Frac> {
+            #[cfg(not(feature = "serde-str"))]
             fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-                let is_human_readable = serializer.is_human_readable();
+                let bits = self.to_bits();
                 let mut state = serializer.serialize_struct($Name, 1)?;
-                if cfg!(feature = "serde-str") && is_human_readable {
-                    let mut buffer = Buffer {
-                        len: 0,
-                        data: [0; 48],
-                    };
-                    let _ = write!(buffer, "{}", self);
-                    let string = str::from_utf8(&buffer.data[0..buffer.len]).expect("utf8");
-                    state.serialize_field("value", string)?;
-                } else {
-                    let bits = self.to_bits();
-                    state.serialize_field("bits", &bits)?;
-                }
+                state.serialize_field("bits", &bits)?;
                 state.end()
+            }
+
+            #[cfg(feature = "serde-str")]
+            fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+                if serializer.is_human_readable() {
+                    let string = format!("{}", self);
+                    string.serialize(serializer)
+                } else {
+                    self.to_bits().serialize(serializer)
+                }
             }
         }
 
@@ -86,13 +71,11 @@ macro_rules! serde_fixed {
         }
 
         impl<'de, Frac: $LeEqU> Deserialize<'de> for $Fixed<Frac> {
+            #[cfg(not(feature = "serde-str"))]
             fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-                struct FixedVisitor<Frac: $LeEqU> {
-                    phantom: PhantomData<Frac>,
-                    is_human_readable: bool,
-                };
+                struct FixedVisitor;
 
-                impl<'de, Frac: $LeEqU> Visitor<'de> for FixedVisitor<Frac> {
+                impl<'de> Visitor<'de> for FixedVisitor {
                     type Value = $TBits;
 
                     fn expecting(&self, formatter: &mut Formatter) -> FmtResult {
@@ -101,21 +84,9 @@ macro_rules! serde_fixed {
                     }
 
                     fn visit_seq<V: SeqAccess<'de>>(self, mut seq: V) -> Result<$TBits, V::Error> {
-                        #[cfg(feature = "serde-str")]
-                        if self.is_human_readable {
-                            let string: String = seq
-                                .next_element()?
-                                .ok_or_else(|| de::Error::invalid_length(0, &self))?;
-                            let num: $Fixed<Frac> = string.parse().map_err(|_| {
-                                de::Error::invalid_value(Unexpected::Str(&string), &self)
-                            })?;
-                            return Ok(num.to_bits());
-                        }
-                        // would be an unused variable if not serde-str
-                        let _ = self.is_human_readable;
                         let bits = seq
                             .next_element()?
-                            .ok_or_else(|| de::Error::invalid_length(0, &self))?;
+                            .ok_or_else(|| DeError::invalid_length(0, &self))?;
                         Ok(bits)
                     }
 
@@ -125,43 +96,29 @@ macro_rules! serde_fixed {
                             match key {
                                 Field::Bits => {
                                     if bits.is_some() {
-                                        return Err(de::Error::duplicate_field("bits"));
+                                        return Err(DeError::duplicate_field("bits"));
                                     }
                                     bits = Some(map.next_value()?);
                                 }
-                                #[cfg(feature = "serde-str")]
-                                Field::Value => {
-                                    if bits.is_some() {
-                                        return Err(de::Error::duplicate_field("value"));
-                                    }
-                                    let string: String = map.next_value()?;
-                                    let num: $Fixed<Frac> = string.parse().map_err(|_| {
-                                        de::Error::invalid_value(Unexpected::Str(&string), &self)
-                                    })?;
-                                    bits = Some(num.to_bits());
-                                }
                             }
                         }
-                        let missing = if cfg!(feature = "serde-str") {
-                            "value"
-                        } else {
-                            "bits"
-                        };
-                        let bits = bits.ok_or_else(|| de::Error::missing_field(missing))?;
+                        let bits = bits.ok_or_else(|| DeError::missing_field("bits"))?;
                         Ok(bits)
                     }
                 }
 
-                let is_human_readable = deserializer.is_human_readable();
-                let bits = deserializer.deserialize_struct(
-                    $Name,
-                    FIELDS,
-                    FixedVisitor::<Frac> {
-                        phantom: PhantomData,
-                        is_human_readable,
-                    },
-                )?;
+                let bits = deserializer.deserialize_struct($Name, FIELDS, FixedVisitor)?;
                 Ok($Fixed::from_bits(bits))
+            }
+
+            #[cfg(feature = "serde-str")]
+            fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+                if deserializer.is_human_readable() {
+                    let string = String::deserialize(deserializer)?;
+                    $Fixed::from_str(&string).map_err(|e| DeError::custom(e))
+                } else {
+                    $TBits::deserialize(deserializer).map($Fixed::from_bits)
+                }
             }
         }
 
@@ -191,18 +148,15 @@ serde_fixed! { FixedU32(LeEqU32) is u32 name "FixedU32" }
 serde_fixed! { FixedU64(LeEqU64) is u64 name "FixedU64" }
 serde_fixed! { FixedU128(LeEqU128) is u128 name "FixedU128" }
 
-const FIELDS: &[&str] = &[
-    "bits",
-    #[cfg(feature = "serde-str")]
-    "value",
-];
+#[cfg(not(feature = "serde-str"))]
+const FIELDS: &[&str] = &["bits"];
 
+#[cfg(not(feature = "serde-str"))]
 enum Field {
     Bits,
-    #[cfg(feature = "serde-str")]
-    Value,
 }
 
+#[cfg(not(feature = "serde-str"))]
 impl<'de> Deserialize<'de> for Field {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Field, D::Error> {
         struct FieldVisitor;
@@ -211,20 +165,13 @@ impl<'de> Deserialize<'de> for Field {
             type Value = Field;
 
             fn expecting(&self, formatter: &mut Formatter) -> FmtResult {
-                let s = if cfg!(feature = "serde-str") {
-                    "`bits` or `value`"
-                } else {
-                    "`bits`"
-                };
-                formatter.write_str(s)
+                formatter.write_str("`bits`")
             }
 
-            fn visit_str<E: de::Error>(self, value: &str) -> Result<Field, E> {
+            fn visit_str<E: DeError>(self, value: &str) -> Result<Field, E> {
                 match value {
                     "bits" => Ok(Field::Bits),
-                    #[cfg(feature = "serde-str")]
-                    "value" => Ok(Field::Value),
-                    _ => Err(de::Error::unknown_field(value, FIELDS)),
+                    _ => Err(DeError::unknown_field(value, FIELDS)),
                 }
             }
         }

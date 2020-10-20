@@ -78,6 +78,15 @@ The conversions supported cover the following cases.
 
 ## What’s new
 
+### Version 1.4.0 news (unreleased)
+
+  * For the experimental feature [`serde-str`][feat-exp-1-4],
+    serialization in human-readable formats was made more convenient
+    to write manually. (This makes it incompatible with the version in
+    1.3.0.)
+
+[feat-exp-1-4]: https://tspiteri.gitlab.io/fixed/dev/fixed/#experimental-optional-features
+
 ### Version 1.3.0 news (2020-10-15)
 
   * The [`MulAssign`] implementation on fixed-point numbers now
@@ -243,12 +252,12 @@ There are three experimental feature:
     similar to how wrapping methods will wrap even when debug
     assertions are enabled. (The plan is to always enable this
     functionality but remove the experimental feature in version
-    1.4.0.)
+    1.5.0.)
  3. `serde-str`, disabled by default. Fixed-point numbers are
     serialized as strings showing the value when using human-readable
     formats. This feature requires the `serde` and the `std` optional
     features. (The plan is to upgrade this to an optional feature in
-    version 1.4.0.) **Warning:** numbers serialized when this feature
+    version 1.5.0.) **Warning:** numbers serialized when this feature
     is enabled cannot be deserialized when this feature is disabled.
 
 ## License
