@@ -41,6 +41,7 @@ use num_traits::{
     },
     sign::{Signed, Unsigned},
     Num,
+    NumCast
 };
 #[cfg(feature = "std")]
 use std::error::Error;
@@ -127,6 +128,12 @@ macro_rules! impl_traits {
                     _ => return Err(RadixParseFixedError::UnsupportedRadix),
                 }
                 .map_err(RadixParseFixedError::ParseFixedError)
+            }
+        }
+
+        impl<Frac: $LeEqU> NumCast for $Fixed<Frac> {
+            fn from<T: ToPrimitive>(n: T) -> Option<Self> {
+                n.to_f64().and_then(Self::from_f64)
             }
         }
 
