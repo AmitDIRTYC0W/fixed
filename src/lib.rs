@@ -302,6 +302,8 @@ extern crate std;
 mod macros;
 
 mod arith;
+#[cfg(feature = "borsh")]
+mod borshize;
 mod cast;
 mod cmp;
 pub mod consts;
@@ -493,7 +495,7 @@ assert_eq!(two_point_75.to_string(), \"2.8\");
 ";
             #[repr(transparent)]
             pub struct $Fixed<Frac> {
-                bits: $Inner,
+                pub(crate) bits: $Inner,
                 phantom: PhantomData<Frac>,
             }
         }
