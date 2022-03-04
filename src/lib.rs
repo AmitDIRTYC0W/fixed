@@ -715,8 +715,8 @@ fixed! {
 /// [`from_num`]: FixedI32::from_num
 #[macro_export]
 macro_rules! const_fixed_from_int {
-    ($(const $NAME:ident: $Fixed:ty = $int:expr;)*) => { $(
-        const $NAME: $Fixed = <$Fixed>::from_bits({
+    ($($vis:vis const $NAME:ident: $Fixed:ty = $int:expr;)*) => { $(
+        $vis const $NAME: $Fixed = <$Fixed>::from_bits({
             // Coerce type.
             let int = <$Fixed>::from_bits($int).to_bits();
             let frac_nbits = <$Fixed>::FRAC_BITS;
@@ -768,6 +768,15 @@ macro_rules! const_fixed_from_int {
 ///     const MINUS_TWO_I0: I2F30 = -2;
 ///     const MINUS_TWO_I1: I32F0 = -2;
 /// }
+///
+/// mod test_pub {
+///     use fixed::{const_fixed_from_int, types::*};
+///
+///     const_fixed_from_int! {
+///         pub const PUB: I32F0 = 0;
+///     }
+/// }
+///
 /// assert_eq!(ZERO_I0, 0);
 /// assert_eq!(ZERO_I1, 0);
 /// assert_eq!(ZERO_U0, 0);
@@ -783,6 +792,8 @@ macro_rules! const_fixed_from_int {
 ///
 /// assert_eq!(MINUS_TWO_I0, -2);
 /// assert_eq!(MINUS_TWO_I1, -2);
+///
+/// assert_eq!(test_pub::PUB, 0);
 /// ```
 ///
 /// The rest of the tests should all fail compilation.
