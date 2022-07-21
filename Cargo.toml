@@ -7,7 +7,7 @@
 
 [package]
 name = "fixed"
-version = "1.16.0"
+version = "1.16.1"
 description = "Fixed-point numbers"
 documentation = "https://docs.rs/fixed"
 repository = "https://gitlab.com/tspiteri/fixed"
@@ -16,6 +16,7 @@ keywords = ["fixed", "fixed-point", "mathematics", "numerics"]
 categories = ["algorithms", "embedded", "mathematics", "no-std"]
 license = "MIT/Apache-2.0"
 edition = "2021"
+rust-version = "1.61"
 
 [features]
 fail-on-warnings = []
