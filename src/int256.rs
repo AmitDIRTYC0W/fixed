@@ -89,12 +89,12 @@ const fn i128_lo_hi(i: i128) -> (u64, i64) {
 
 #[inline]
 const fn mul_u64_u64(a: u64, b: u64) -> u128 {
-    (a as u128) * (b as u128)
+    (a as u128).wrapping_mul(b as u128)
 }
 
 #[inline]
 const fn mul_i64_i64(a: i64, b: i64) -> i128 {
-    (a as i128) * (b as i128)
+    (a as i128).wrapping_mul(b as i128)
 }
 
 #[inline]
@@ -106,7 +106,7 @@ const fn mul_u64_i64(a: u64, b: i64) -> i128 {
     } else {
         0
     };
-    (a as i128) * (b as i128) + correction
+    (a as i128).wrapping_mul(b as i128).wrapping_add(correction)
 }
 
 #[inline]
@@ -129,21 +129,23 @@ pub const fn wide_mul_u128(lhs: u128, rhs: u128) -> U256 {
     // 0 <= col64b <= 2^128 - 2^64 - 1
     let col64b = (col64a as u128).wrapping_add(lh_rl);
 
-    // 0 <= col64c <= 2^128 - 1
-    // 0 <= col192 <= 1
-    let (col64c, col192) = col64b.overflowing_add(ll_rh);
-    let col192 = if col192 { 1u128 } else { 0u128 };
+    // 0 <= col64c <= 2^64 - 1
+    // 0 <= col128a <= 2^64 - 2
+    let (col64c, col128a) = u128_lo_hi(col64b);
+
+    // 0 <= col64d <= 2^128 - 2^64
+    let col64d = (col64c as u128).wrapping_add(ll_rh);
 
     // 0 <= col64 <= 2^64 - 1
-    // 0 <= col128 <= 2^64 - 1
-    let (col64, col128) = u128_lo_hi(col64c);
+    // 0 <= col128b <= 2^64 - 1
+    let (col64, col128b) = u128_lo_hi(col64d);
 
     // Since both col0 and col64 fit in 64 bits, ans0 sum will never overflow.
     let ans0 = (col0 as u128) | ((col64 as u128) << 64);
     // Since lhs * rhs fits in 256 bits, ans128 sum will never overflow.
     let ans128 = lh_rh
-        .wrapping_add(col128 as u128)
-        .wrapping_add(col192 << 64);
+        .wrapping_add(col128a as u128)
+        .wrapping_add(col128b as u128);
     U256 {
         lo: ans0,
         hi: ans128,
