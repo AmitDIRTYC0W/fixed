@@ -172,30 +172,23 @@ pub const fn wide_mul_i128(lhs: i128, rhs: i128) -> I256 {
     // -2^127 + 2^63 <= col64b <= 2^127 - 2^63 - 1
     let col64b = (col64a as i128).wrapping_add(lh_rl);
 
-    // -2^127 <= col64c <= 2^127 - 1
-    // -1 <= col192 <= 1
-    let (col64c, col192) = col64b.overflowing_add(ll_rh);
-    let col192 = if col192 {
-        // col64b and ll_rh have the same sign, and col64c has the opposite sign.
-        if col64b < 0 {
-            -1i128
-        } else {
-            1i128
-        }
-    } else {
-        0i128
-    };
+    // 0 <= col64c <= 2^64 - 1
+    // -2^63 <= col128a <= 2^63 - 1
+    let (col64c, col128a) = i128_lo_hi(col64b);
+
+    // -2^127 + 2^63 <= col64d <= 2^127 - 2^63
+    let col64d = (col64c as i128).wrapping_add(ll_rh);
 
     // 0 <= col64 <= 2^64 - 1
-    // -2^63 <= col128 <= 2^63 - 1
-    let (col64, col128) = i128_lo_hi(col64c);
+    // -2^63 <= col128b <= 2^63 - 1
+    let (col64, col128b) = i128_lo_hi(col64d);
 
     // Since both col0 and col64 fit in 64 bits, ans0 sum will never overflow.
     let ans0 = (col0 as u128) | ((col64 as u128) << 64);
     // Since lhs * rhs fits in 256 bits, ans128 sum will never overflow.
     let ans128 = lh_rh
-        .wrapping_add(col128 as i128)
-        .wrapping_add(col192 << 64);
+        .wrapping_add(col128a as i128)
+        .wrapping_add(col128b as i128);
     I256 {
         lo: ans0,
         hi: ans128,
