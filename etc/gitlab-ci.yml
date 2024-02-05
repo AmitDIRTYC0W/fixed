@@ -38,7 +38,7 @@ x86_64-gnulinux:
   - ci
 
 i686-gnulinux:
-  image: i386/rust:1
+  image: i386/rust:1.74.1
   variables:
     TARGET: i686
   cache:
@@ -76,7 +76,7 @@ x86_64-gnulinux-tidy:
   - ci
 
 i686-gnulinux-tidy:
-  image: i386/rust:1
+  image: i386/rust:1.74.1
   variables:
     TARGET: i686
   cache:
