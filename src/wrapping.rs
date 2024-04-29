@@ -13,6 +13,9 @@
 // <https://www.apache.org/licenses/LICENSE-2.0> and
 // <https://opensource.org/licenses/MIT>.
 
+use bytemuck::Zeroable;
+use num_traits::{identities::Zero, One};
+
 use crate::{
     from_str::ParseFixedError,
     traits::{Fixed, FixedBits, FixedBoundFrac, FixedSigned, FixedUnsigned, FromFixed, ToFixed},
@@ -2381,3 +2384,23 @@ ops! { FixedU16(u16, 16) }
 ops! { FixedU32(u32, 32) }
 ops! { FixedU64(u64, 64) }
 ops! { FixedU128(u128, 128) }
+
+impl<F: Fixed> Zero for Wrapping<F> {
+    fn zero() -> Self {
+        Self::ZERO
+    }
+
+    fn is_zero(&self) -> bool {
+        Wrapping::<F>::is_zero(*self)
+    }
+}
+
+impl<F: Fixed> One for Wrapping<F> {
+    fn one() -> Self {
+        Wrapping(F::TRY_ONE.unwrap())
+    }
+
+    fn is_one(&self) -> bool {
+        self.0 == F::TRY_ONE.unwrap()
+    }
+}

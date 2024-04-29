@@ -24,7 +24,7 @@ az = "1.2"
 borsh = { default-features = false, optional = true, version = "1" }
 bytemuck = "1.2"
 half = { default_features = false, version = ">= 1.8, < 3" }
-num-traits = { default-features = false, features = ["i128"], optional = true, version = "0.2.15" }
+num-traits = { version = "0.2.18" }
 serde = { default-features = false, optional = true, version = "1.0.60" }
 
 [features]
@@ -35,7 +35,7 @@ serde-str = ["serde", "serde/std", "std"]
 std = []
 
 # experimental features
-num-traits = ["dep:num-traits"]
+num-traits = []
 
 # undocumented features
 fail-on-warnings = []
